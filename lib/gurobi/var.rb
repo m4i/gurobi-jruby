@@ -9,7 +9,8 @@ class Var
     # @see Gurobi::Model#add_binary_var
     def create_binary(*args)
       keyword_args = args.last.is_a?(Hash) ? args.pop : {}
-      new(*args, keyword_args.merge(lb: 0.0, ub: 1.0, vtype: GRB::BINARY))
+      keyword_args = { lb: 0.0, ub: 1.0 }.merge(keyword_args)
+      new(*args, keyword_args.merge(vtype: GRB::BINARY))
     end
 
     # @return [Gurobi::Var]
