@@ -208,6 +208,14 @@ class Var
   end
   alias to_gurobi grb_var
 
+  # Call by Gurobi::Model#update
+  #
+  # @return [void]
+  def update
+    sync_name
+    set_attributes!
+  end
+
   # @return [void]
   def sync_name
     @name = grb_var.get(GRB::StringAttr::VarName)
@@ -215,7 +223,7 @@ class Var
 
   # Creates attribute accessors
   extend Attribute
-  attributes :grb_var, %w(
+  attributes :@grb_var, %w(
     X              x               No
     Xn             xn              No
     RC             rc              No

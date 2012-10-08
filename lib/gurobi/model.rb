@@ -184,14 +184,14 @@ class Model
       var.gurobize(grb_model)
     end
     grb_model.update
-    @pending_vars.each(&:sync_name)
+    @pending_vars.each(&:update)
     @pending_vars.clear
 
     @pending_constrs.each do |constr|
       constr.gurobize(grb_model)
     end
     grb_model.update
-    @pending_constrs.each(&:sync_name)
+    @pending_constrs.each(&:update)
     @pending_constrs.clear
 
     grb_model.objective = @objective.send(:to_gurobi) if @objective
@@ -259,12 +259,13 @@ class Model
 
   # @return [GRBModel]
   def grb_model
-    @grb_model ||= begin
+    unless @grb_model
       raise Error, 'not yet set env' unless @env
-      GRBModel.new(@env.grb_env).tap do |grb_model|
-        grb_model.set(GRB::IntAttr::ModelSense, @sense)
-      end
+      @grb_model = GRBModel.new(@env.grb_env)
+      @grb_model.set(GRB::IntAttr::ModelSense, @sense)
+      set_attributes!
     end
+    @grb_model
   end
 
   # @param name [String, Symbol]
@@ -310,7 +311,7 @@ class Model
 
   # Creates attribute accessors
   extend Attribute
-  attributes :grb_model, %w(
+  attributes :@grb_model, %w(
     NumConstrs   num_constrs    No
     NumVars      num_vars       No
     NumSOS       num_sos        No

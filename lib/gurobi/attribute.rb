@@ -30,19 +30,33 @@ module Attribute
   # @return [void]
   # @see http://www.gurobi.com/documentation/5.0/reference-manual/node652
   def attributes(delegate, attributes)
+    class_eval(<<-EOS, __FILE__, __LINE__ + 1)
+      def set_attributes!
+        @attributes.each do |name, value|
+          #{delegate}.set(Attribute.by_name(name), value)
+        end if @attributes
+      end
+      private :set_attributes!
+    EOS
+
     attributes.each_slice(3) do |name, method, settable|
       attr = "#{Attribute.by_name(name).class.name}::#{name}"
 
       if method[-1] == ??
         class_eval(<<-EOS, __FILE__, __LINE__ + 1)
           def #{method}
-            #{delegate}.get(#{attr}) != 0
+            value = (@attributes && @attributes.key?(:#{name.inspect})) ?
+              @attributes[:#{name.inspect}] :
+              (#{delegate} && #{delegate}.get(#{attr}))
+            value.nil? ? nil : (value != 0)
           end
         EOS
       else
         class_eval(<<-EOS, __FILE__, __LINE__ + 1)
           def #{method}
-            #{delegate}.get(#{attr})
+            (@attributes && @attributes.key?(:#{name.inspect})) ?
+              @attributes[:#{name.inspect}] :
+              (#{delegate} && #{delegate}.get(#{attr}))
           end
         EOS
       end
@@ -50,7 +64,9 @@ module Attribute
       if settable == 'Yes'
         class_eval(<<-EOS, __FILE__, __LINE__ + 1)
           def #{method}=(value)
-            #{delegate}.set(#{attr}, value)
+            @attributes ||= {}
+            @attributes[:#{name.inspect}] = value
+            #{delegate}.set(#{attr}, value) if #{delegate}
           end
         EOS
       end

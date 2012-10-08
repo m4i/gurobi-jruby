@@ -97,6 +97,14 @@ class Constr
     @grb_constr
   end
 
+  # Call by Gurobi::Model#update
+  #
+  # @return [void]
+  def update
+    sync_name
+    set_attributes!
+  end
+
   # @return [void]
   def sync_name
     @name = grb_constr.get(GRB::StringAttr::ConstrName)
@@ -104,7 +112,7 @@ class Constr
 
   # Creates attribute accessors
   extend Attribute
-  attributes :grb_constr, %w(
+  attributes :@grb_constr, %w(
     Pi         pi          No
     Slack      slack       No
     CBasis     c_basis     Yes
