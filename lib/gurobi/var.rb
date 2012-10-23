@@ -33,22 +33,22 @@ class Var
     # @see Gurobi::Model#add_var
     def parse_initialize_arguments(*args)
       original_args = args.dup
-      keyword_args = args.last.is_a?(Hash) ? args.pop : {}
-      range = keyword_args[:range]
+      keyword_args = args.last.is_a?(Hash) ? args.pop.dup : {}
+
+      range = keyword_args.delete(:range)
+      lb    = keyword_args.delete(:lb)
+      ub    = keyword_args.delete(:ub)
       {
-        lb:    range && range.begin ||
-               keyword_args[:lb]    || args.shift || 0.0,
-        ub:    range && range.end   ||
-               keyword_args[:ub]    || args.shift || GRB::INFINITY,
-        obj:   keyword_args[:obj]   || args.shift || 0.0,
-        vtype: keyword_args[:vtype] || args.shift || GRB::CONTINUOUS,
-        name:  keyword_args[:name]  || args.shift,
+        lb:    range && range.begin || lb  || args.shift || 0.0,
+        ub:    range && range.end   || ub  || args.shift || GRB::INFINITY,
+        obj:   keyword_args.delete(:obj)   || args.shift || 0.0,
+        vtype: keyword_args.delete(:vtype) || args.shift || GRB::CONTINUOUS,
+        name:  keyword_args.delete(:name)  || args.shift,
       }.tap do
-        unless args.empty? &&
-            (keyword_args.keys - [:lb, :ub, :range, :obj, :vtype, :name]).empty?
+        unless args.empty?
           raise Error, "invalid arguments: #{original_args}"
         end
-      end
+      end.merge(keyword_args)
     end
   end
 
@@ -71,12 +71,18 @@ class Var
 
   # @see Gurobi::Model#add_var
   def initialize(*args)
-    keyword_args = self.class.send(:parse_initialize_arguments, *args)
-    self.lb    = keyword_args[:lb]
-    self.ub    = keyword_args[:ub]
-    @obj       = keyword_args[:obj]
-    self.vtype = keyword_args[:vtype]
-    @name      = keyword_args[:name]
+    attributes = self.class.send(:parse_initialize_arguments, *args)
+
+    ([:lb, :ub, :obj, :vtype, :name] +
+        self.class.settable_attributes).each do |key|
+      if attribute = attributes.delete(key)
+        send("#{key}=", attribute)
+      end
+    end
+
+    unless attributes.empty?
+      raise Error, "invalid arguments: #{attributes.inspect}"
+    end
   end
 
   # @return [Gurobi::LinExpr]

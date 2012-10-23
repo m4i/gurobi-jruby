@@ -39,7 +39,10 @@ module Attribute
       private :set_attributes!
     EOS
 
-    attributes.each_slice(3) do |name, method, settable|
+    # to_a for JRuby's ConcurrencyError
+    @attributes = attributes.each_slice(3).to_a
+
+    @attributes.each do |name, method, settable|
       attr = "#{Attribute.by_name(name).class.name}::#{name}"
 
       if method[-1] == ??
@@ -70,6 +73,15 @@ module Attribute
           end
         EOS
       end
+    end
+  end
+
+  # @return [Array<Symbol>]
+  def settable_attributes
+    @attributes.select do |name, method, settable|
+      settable == 'Yes'
+    end.map do |name, method, settable|
+      method.to_sym
     end
   end
 end
